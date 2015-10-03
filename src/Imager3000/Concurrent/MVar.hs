@@ -6,8 +6,6 @@ module Imager3000.Concurrent.MVar
 
 import Control.Concurrent
 
-import Imager3000.Types
-
 
 data Config = Config
   { poolSize :: Int
@@ -23,7 +21,7 @@ defaultConfig = Config { poolSize=5 }
 --   Then it spawns `poolSize` threads, which one by one consume this value.
 --   If it's `Just something` they process it and iterate.
 --   If it's `Nothing`, they put Nothing back in and free their lock.
-concurrently :: Config -> [a] -> Action a -> IO ()
+concurrently :: Config -> [a] -> (a -> IO ()) -> IO ()
 concurrently cfg datas act = do
 
     -- create data pipe in
@@ -43,7 +41,7 @@ concurrently cfg datas act = do
     mapM_ takeMVar m_locks
 
 
-work :: MVar () -> MVar (Maybe a) -> Action a -> IO ()
+work :: MVar () -> MVar (Maybe a) -> (a -> IO ()) -> IO ()
 work m_lock m_t act = do
     -- take the data
     t <- takeMVar m_t

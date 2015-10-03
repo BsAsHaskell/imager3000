@@ -18,7 +18,6 @@ executable imager3000
   other-modules:       Imager3000.Fetch
                      , Imager3000.Parse
                      , Imager3000.Download
-                     , Imager3000.Types
                      , Imager3000.Concurrent.MVar
                      , Imager3000.Concurrent.Async
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N

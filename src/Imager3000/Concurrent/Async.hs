@@ -4,10 +4,7 @@ module Imager3000.Concurrent.Async
   , poolSize
   ) where
 
-import Control.Concurrent
 import Control.Concurrent.Async.Pool hiding (concurrently)
-
-import Imager3000.Types
 
 
 data Config = Config
@@ -18,7 +15,7 @@ data Config = Config
 defaultConfig :: Config
 defaultConfig = Config { poolSize=5 }
 
-concurrently :: Show a => Config -> [a] -> Action a -> IO ()
+concurrently :: Show a => Config -> [a] -> (a -> IO()) -> IO ()
 concurrently cfg datas act = do
     let actions = map act datas
 

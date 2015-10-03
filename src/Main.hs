@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Data.Text (Text)
 import System.Environment
-import System.IO
 
 import Imager3000.Parse
 import Imager3000.Download
@@ -13,8 +11,6 @@ import Imager3000.Fetch
 
 main :: IO ()
 main = do
-    --hSetBuffering stdout NoBuffering
-
     [url] <- getArgs
     run url
 
