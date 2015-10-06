@@ -15,7 +15,7 @@ data Config = Config
 defaultConfig :: Config
 defaultConfig = Config { poolSize=5 }
 
-concurrently :: Show a => Config -> [a] -> (a -> IO()) -> IO ()
+concurrently :: Config -> [a] -> (a -> IO()) -> IO ()
 concurrently cfg datas act = do
     let actions = map act datas
 
