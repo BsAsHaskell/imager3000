@@ -7,6 +7,6 @@ import Control.Concurrent
 
 fetch :: String -> String -> IO ()
 fetch base_url url = do
-    putStrLn $ "Fetching: " ++ url
+    putStrLn ("Fetching: " ++ url)
     threadDelay (1 * 1000000)
-    putStrLn $ "Fetched: " ++ url
+    putStrLn ("Fetched: " ++ url)
