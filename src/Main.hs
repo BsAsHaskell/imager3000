@@ -5,7 +5,7 @@ import System.Environment
 
 import Imager3000.Parse
 import Imager3000.Download
-import Imager3000.Concurrent.Async
+import Imager3000.Concurrent.MVar
 import Imager3000.Fetch
 
 
@@ -20,8 +20,8 @@ run base_url = do
 
     let imgs = getImages contents
 
-    print imgs
+    --print imgs
 
-    let action = \url -> fetch base_url url
+    let actions = map (\url -> fetch base_url url) imgs
 
-    concurrently defaultConfig imgs action
+    concurrently defaultConfig actions

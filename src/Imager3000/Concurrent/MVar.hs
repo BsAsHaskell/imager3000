@@ -21,41 +21,44 @@ defaultConfig = Config { poolSize=5 }
 --   Then it spawns `poolSize` threads, which one by one consume this value.
 --   If it's `Just something` they process it and iterate.
 --   If it's `Nothing`, they put Nothing back in and free their lock.
-concurrently :: Config -> [a] -> (a -> IO ()) -> IO ()
-concurrently cfg datas act = do
+concurrently :: Config -> [IO ()] -> IO ()
+concurrently cfg acts = do
 
     -- create data pipe in
-    m_source <- newEmptyMVar :: IO (MVar (Maybe a))
+    m_source <- newEmptyMVar
 
     -- put all data on it, on a separate thread
-    forkIO (mvarFeed datas m_source)
+    forkIO (mvarFeed acts m_source)
 
     -- create `poolSize` locks, in order to wait
     -- for the completition of each thread
     m_locks <- mapM (\_ -> newEmptyMVar) [1..poolSize cfg]
 
     -- span `poolSize` threads, all consuming from `m_source`
-    mapM_ (\lock -> forkIO (work lock m_source act)) m_locks
+    mapM_ (\lock -> forkIO (mvarConsume lock m_source)) m_locks
 
-    -- wait for thhreads to finish
+    -- wait for threads to finish
     mapM_ takeMVar m_locks
 
 
-work :: MVar () -> MVar (Maybe a) -> (a -> IO ()) -> IO ()
-work m_lock m_t act = do
+-- | Basically, take from the second MVar until it's Nothing,
+--   executing it's contents as IO, and then put () into the first one.
+mvarConsume :: MVar () -> MVar (Maybe (IO ())) -> IO ()
+mvarConsume m_lock m_source = do
     -- take the data
-    t <- takeMVar m_t
+    t <- takeMVar m_source
     case t of
         -- if it has something
         Just t' -> do
-            -- process it
-            act t'
+            -- execute it
+            t'
             -- and call ourselves
-            work m_lock m_t act
+            mvarConsume m_lock m_source
+
         -- if it's empty
         Nothing -> do
             -- put Nothing back in
-            putMVar m_t t
+            putMVar m_source Nothing
             -- and clear the lock
             putMVar m_lock ()
 

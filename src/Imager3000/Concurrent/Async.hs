@@ -15,11 +15,9 @@ data Config = Config
 defaultConfig :: Config
 defaultConfig = Config { poolSize=5 }
 
-concurrently :: Config -> [a] -> (a -> IO()) -> IO ()
-concurrently cfg datas act = do
-    let actions = map act datas
-
+concurrently :: Config -> [IO ()] -> IO ()
+concurrently cfg acts = do
     withTaskGroup (poolSize cfg) (
-        \g -> mapTasks g actions)
+        \g -> mapTasks g acts)
 
     return ()
