@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Imager3000.Download
   ( download
+  , getFullURI
   ) where
 
 import Data.ByteString.Lazy (ByteString)
@@ -17,8 +18,8 @@ download url = do
     return (responseBody response)
 
 
-relativeUrl :: String -> String -> String
-relativeUrl master url =
+getFullURI :: String -> String -> String
+getFullURI master url =
     let Just master_url = parseURIReference master
         Just url_url = parseURIReference url
     in
