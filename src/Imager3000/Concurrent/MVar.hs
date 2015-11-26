@@ -5,6 +5,7 @@ module Imager3000.Concurrent.MVar
   ) where
 
 import Control.Concurrent
+import Control.Monad
 
 
 data Config = Config
@@ -15,56 +16,59 @@ data Config = Config
 defaultConfig :: Config
 defaultConfig = Config { poolSize=5 }
 
--- | This function works by creating an `MVar` and putting
---   all the data as `Just datum`.
---
---   Then it spawns `poolSize` threads, which one by one consume this value.
---   If it's `Just something` they process it and iterate.
---   If it's `Nothing`, they put Nothing back in and free their lock.
+-- | Esta función toma una lista de `actions` IO y las corre
+--   concurrentemente usando `poolSize` threads.
 concurrently :: Config -> [IO ()] -> IO ()
-concurrently cfg acts = do
+concurrently cfg actions = do
 
-    -- create data pipe in
+    -- Primero creamos una MVar vacia.
     m_source <- newEmptyMVar
 
-    -- put all data on it, on a separate thread
-    forkIO (mvarFeed acts m_source)
+    -- Después en una thread, metemos cada acción
+    -- en la MVar secuencialmente.
+    forkIO (do
+        forM_ actions (\act -> do
+            putMVar m_source (Just act)
+            )
+        -- y al final ponemos Nothing para desencadenar
+        -- el fin de cada thread del pool
+        putMVar m_source Nothing
+        )
 
-    -- create `poolSize` locks, in order to wait
-    -- for the completition of each thread
-    m_locks <- mapM (\_ -> newEmptyMVar) [1..poolSize cfg]
+    -- Por otro lado, creamos `poolSize` MVars, funcionando como locks,
+    -- para luego esperar a que cada thread termine.
+    m_locks <- forM [1..poolSize cfg] (\_ -> do
+        newEmptyMVar
+        )
 
-    -- span `poolSize` threads, all consuming from `m_source`
-    mapM_ (\lock -> forkIO (mvarConsume lock m_source)) m_locks
+    -- Finalmente levantamos una thread por lock
+    -- que consuma la MVar
+    forM_ m_locks (\lock -> do
+        forkIO (mvarConsume lock m_source)
+        )
 
-    -- wait for threads to finish
-    mapM_ takeMVar m_locks
+    -- y esperamos que todos los locks se liberen
+    forM_ m_locks (\l -> do
+        takeMVar l
+        )
 
 
--- | Basically, take from the second MVar until it's Nothing,
---   executing it's contents as IO, and then put () into the first one.
+-- | Recursivamente tomar de `m_source` un `Maybe (IO ())`:
+--      si tiene `Just algo`, ejecutar `algo`
+--      si tiene `Nothing`, liberar el lock `m_lock` poniendo `()`.
 mvarConsume :: MVar () -> MVar (Maybe (IO ())) -> IO ()
 mvarConsume m_lock m_source = do
-    -- take the data
     t <- takeMVar m_source
     case t of
-        -- if it has something
         Just t' -> do
-            -- execute it
             t'
-            -- and call ourselves
             mvarConsume m_lock m_source
 
-        -- if it's empty
         Nothing -> do
-            -- put Nothing back in
+            -- si no ponemos `Nothing` de nuevo, la próxima
+            -- thread del pool que quiera usar la MVar
+            -- lockearia indefinidamente
             putMVar m_source Nothing
-            -- and clear the lock
+
+            -- finalmente releaseamos el lock
             putMVar m_lock ()
-
-
-mvarFeed :: [a] -> MVar (Maybe a) -> IO ()
-mvarFeed [] m_source = putMVar m_source Nothing
-mvarFeed (x:xs) m_source = do
-    putMVar m_source (Just x)
-    mvarFeed xs m_source

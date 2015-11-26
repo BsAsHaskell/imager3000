@@ -12,7 +12,7 @@ Esta diseñado a partir de modularizar la concurrencia, ofreciendo por el moment
 dos implementaciones para la misma. Ambas exponen una función:
 
 ```
-concurrently :: Config -> [a] -> (a -> IO ()) -> IO ()
+concurrently :: Config -> [IO ()] -> IO ()
 ```
 
 que toma cuantos workers usar (default 5), una lista de "cosas"

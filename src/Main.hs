@@ -2,6 +2,7 @@
 module Main where
 
 import System.Environment
+import System.IO
 
 import Imager3000.Parse
 import Imager3000.Download
@@ -11,6 +12,7 @@ import Imager3000.Fetch
 
 main :: IO ()
 main = do
+    --hSetBuffering stdout LineBuffering
     [url] <- getArgs
     run url
 
